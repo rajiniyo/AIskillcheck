@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Check Your Job's AI Risk</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f8f9fa;
+    padding: 20px;
+  }
+  .container {
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  input, button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+  }
+  button {
+    background: #007BFF;
+    color: white;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  .result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background: #eef;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI Job Risk Checker</h1>
+  <input type="text" id="jobTitle" placeholder="Enter your job title">
+  <button onclick="checkJob()">Check Risk</button>
+  <div id="result" class="result" style="display:none;"></div>
+</div>
+
+<script>
+async function checkJob() {
+  const jobTitle = document.getElementById('jobTitle').value.trim();
+  if (!jobTitle) return alert("Please enter a job title");
+
+  const res = await fetch("/check_job", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_title: jobTitle })
+  });
+
+  const data = await res.json();
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result').innerHTML = `
+    <strong>Risk Score:</strong> ${data.risk_score}%<br>
+    <strong>Summary:</strong> ${data.summary}<br>
+    <strong>Key Tools:</strong> ${data.tools.join(', ')}<br>
+    <strong>Risk Factors:</strong> ${data.factors.join(', ')}<br>
+    <strong>Roadmap:</strong> ${data.roadmap.join(' → ')}
+  `;
+}
+</script>
+</body>
+</html>
