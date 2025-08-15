@@ -6,69 +6,247 @@
 <title>Check Your Job's AI Risk</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  body {
-    font-family: 'Inter', sans-serif;
-    background: #f8f9fa;
-    padding: 20px;
-  }
-  .container {
-    max-width: 600px;
-    margin: auto;
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  }
-  input, button {
-    width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-  }
-  button {
-    background: #007BFF;
-    color: white;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    border-radius: 8px;
-  }
-  .result {
-    margin-top: 20px;
-    padding: 15px;
-    border-radius: 8px;
-    background: #eef;
-  }
+:root{
+  --bg1:#0f172a; --bg2:#111827; --glass:rgba(255,255,255,.06);
+  --accent1:#60a5fa; --accent2:#a78bfa; --accent3:#f472b6;
+  --ok:#22c55e; --med:#f59e0b; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:'Inter',system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:#e5e7eb;
+  min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:32px;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+.shell{ width:min(1200px,100%); margin:12px auto; }
+.hero{ padding:28px 24px 4px; text-align:center; }
+.title{
+  font-weight:800; font-size:clamp(28px,4.5vw,48px); margin:0;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.subtitle{opacity:.85; margin-top:8px; font-size:clamp(14px,1.4vw,16px)}
+
+.panel{
+  margin-top:18px; background:var(--glass); border:1px solid rgba(255,255,255,.08);
+  border-radius:20px; padding:20px; backdrop-filter: blur(14px);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+.input{
+  flex:1 1 360px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+  color:#fff; padding:14px 16px; border-radius:14px; outline:none; font-size:16px;
+  transition: .25s background, .25s box-shadow, .25s border;
+}
+.input::placeholder{color:#9ca3af}
+.input:focus{background:rgba(255,255,255,.12); border-color:rgba(96,165,250,.6); box-shadow:0 0 0 6px rgba(96,165,250,.15)}
+.btn{
+  appearance:none; border:0; border-radius:14px; padding:14px 20px; font-weight:700; font-size:16px;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  color:#0b1220; cursor:pointer; transition:transform .15s ease, filter .15s ease;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn[disabled]{opacity:.6; cursor:not-allowed; filter:grayscale(20%)}
+
+.grid{display:grid; gap:24px; grid-template-columns:1fr; margin-top:20px;}
+
+.card{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  padding:20px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+.meter-container{
+  display:flex; justify-content:center; align-items:center;
+}
+.meter{
+  position:relative;
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  background: conic-gradient(#60a5fa 0%, rgba(255,255,255,.12) 0);
+  display:grid; place-items:center;
+}
+.ring{
+  width:100%; height:100%; border-radius:50%;
+  background: conic-gradient(var(--ring-color,#60a5fa) calc(var(--val)*1%), rgba(255,255,255,.12) 0);
+  mask: radial-gradient(circle at 50% 50%, transparent 60%, black 61%);
+  -webkit-mask: radial-gradient(circle at 50% 50%, transparent 60%, black 61%);
+}
+.score{
+  position:absolute; top:30%; font-size:24px; font-weight:800; color:#fff;
+  text-align:center; width:100%;
+}
+.tag{
+  position:absolute; bottom:15%; font-size:14px; font-weight:700; color:#fff; width:100%; text-align:center;
+}
+.right h3{margin:0 0 8px; font-size:18px;}
+.right p, .right ul{opacity:.85; margin-top:6px; font-size:14px; line-height:1.4;}
+.right ul{padding-left:18px;}
+
+.loading{display:inline-flex; align-items:center; gap:10px; color:#bfdbfe; font-weight:600;}
+.spinner{width:18px; height:18px; border-radius:50%; border:3px solid rgba(148,163,184,.25); border-top-color:#93c5fd; animation:spin .8s linear infinite;}
+@keyframes spin {to{transform:rotate(360deg)}}
+.error{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); color:#fecaca; margin-top:10px; padding:10px; border-radius:12px;}
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>AI Job Risk Checker</h1>
-  <input type="text" id="jobTitle" placeholder="Enter your job title">
-  <button onclick="checkJob()">Check Risk</button>
-  <div id="result" class="result" style="display:none;"></div>
+<div class="shell">
+  <section class="hero">
+    <h1 class="title">Check Your Job’s AI Risk</h1>
+    <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
+  </section>
+
+  <section class="panel">
+    <form class="query" id="riskForm">
+      <input id="jobInput" class="input" type="text" placeholder="e.g., Graphic Designer, SQL Developer, HR Manager" autocomplete="on" required />
+      <button id="checkBtn" class="btn" type="submit">Check</button>
+      <span id="loadState" class="loading" style="display:none"><span class="spinner"></span>Analyzing…</span>
+    </form>
+  </section>
+
+  <section id="results" class="grid" style="display:none"></section>
+  <section id="errorBox" class="panel card error" style="display:none"></section>
 </div>
 
 <script>
-async function checkJob() {
-  const jobTitle = document.getElementById('jobTitle').value.trim();
-  if (!jobTitle) return alert("Please enter a job title");
+const form=document.getElementById('riskForm');
+const input=document.getElementById('jobInput');
+const btn=document.getElementById('checkBtn');
+const load=document.getElementById('loadState');
+const results=document.getElementById('results');
+const errorBox=document.getElementById('errorBox');
 
-  const res = await fetch("/check_job", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ job_title: jobTitle })
-  });
+const learningLinks = {
+  "Machine Learning":"https://www.coursera.org/specializations/machine-learning",
+  "Deep Learning":"https://www.deeplearning.ai/",
+  "Reinforcement Learning":"https://www.coursera.org/learn/reinforcement-learning",
+  "NLP":"https://www.coursera.org/learn/natural-language-processing",
+  "Text Analytics":"https://www.edx.org/course/text-analytics",
+  "Sentiment Analysis":"https://www.coursera.org/learn/sentiment-analysis",
+  "Computer Vision":"https://www.coursera.org/learn/computer-vision-basics",
+  "Image Recognition":"https://www.tensorflow.org/tutorials/images",
+  "Object Detection":"https://www.tensorflow.org/hub/tutorials/object_detection",
+  "TensorFlow":"https://www.tensorflow.org/tutorials",
+  "PyTorch":"https://pytorch.org/tutorials/",
+  "Keras":"https://keras.io/getting_started/",
+  "Hugging Face":"https://huggingface.co/docs",
+  "Data Analysis":"https://www.datacamp.com/courses/data-analysis-in-python",
+  "Big Data":"https://www.coursera.org/specializations/big-data",
+  "Data Science":"https://www.coursera.org/specializations/jhu-data-science",
+  "Pandas":"https://pandas.pydata.org/docs/getting_started/index.html",
+  "NumPy":"https://numpy.org/learn/",
+  "Scikit-learn":"https://scikit-learn.org/stable/getting_started.html",
+  "OpenAI API":"https://platform.openai.com/docs/",
+  "Cohere API":"https://docs.cohere.com/docs",
+  "AI for Healthcare":"https://www.edx.org/course/ai-for-healthcare",
+  "AI in Finance":"https://www.coursera.org/learn/ai-in-finance",
+  "Robotic Process Automation (RPA)":"https://www.uipath.com/learning",
+  "AutoML Platforms":"https://cloud.google.com/automl/docs",
+  "Speech Recognition":"https://developer.ibm.com/articles/voice-recognition-in-python/",
+  "Recommender Systems":"https://www.coursera.org/learn/recommender-systems",
+  "GANs":"https://www.coursera.org/learn/build-basic-generative-adversarial-networks-gans",
+  "AI Ethics":"https://www.edx.org/course/ethics-of-ai-and-big-data",
+  "AI in Marketing":"https://www.coursera.org/learn/ai-for-marketing",
+  "AI in HR":"https://www.coursera.org/learn/ai-for-human-resources",
+  "AI in Education":"https://www.coursera.org/learn/ai-in-education",
+  "AI for Entertainment":"https://runwayml.com/learn/",
+  "Generative AI":"https://www.openai.com/research/generative-models",
+  "MLflow":"https://mlflow.org/docs/latest/index.html",
+  "TensorBoard":"https://www.tensorflow.org/tensorboard",
+  "Docker AI Deployment":"https://www.docker.com/blog/how-to-deploy-machine-learning-models-in-docker/",
+  "ChatGPT":"https://platform.openai.com/docs/guides/chat",
+  "Stable Diffusion":"https://stability.ai/blog/stable-diffusion-public-release",
+  "DALL·E":"https://openai.com/dall-e",
+  "MidJourney":"https://docs.midjourney.com/docs"
+};
 
-  const data = await res.json();
-  document.getElementById('result').style.display = 'block';
-  document.getElementById('result').innerHTML = `
-    <strong>Risk Score:</strong> ${data.risk_score}%<br>
-    <strong>Summary:</strong> ${data.summary}<br>
-    <strong>Key Tools:</strong> ${data.tools.join(', ')}<br>
-    <strong>Risk Factors:</strong> ${data.factors.join(', ')}<br>
-    <strong>Roadmap:</strong> ${data.roadmap.join(' → ')}
-  `;
+// Input validation: letters, spaces, -, &, ,
+function isValidJobInput(text){
+  return /^[a-zA-Z\s\-&,]+$/.test(text);
 }
+
+// Real-time input validation
+input.addEventListener('input', ()=>{
+  const valid = isValidJobInput(input.value.trim()) || input.value.trim()==='';
+  if(!valid) input.style.borderColor='#ef4444';
+  else input.style.borderColor='rgba(255,255,255,.12)';
+
+  if(input.value.trim()===''){
+    results.style.display='none';
+    results.innerHTML='';
+    errorBox.style.display='none';
+  }
+});
+
+form.addEventListener('submit',async(e)=>{
+  e.preventDefault();
+  const job=input.value.trim();
+  if(!job){
+    errorBox.textContent='Error: Please enter a job title.';
+    errorBox.style.display='block';
+    return;
+  }
+  if(!isValidJobInput(job)){
+    errorBox.textContent='Error: Please enter a valid job title (letters, spaces, -, &, , allowed).';
+    errorBox.style.display='block';
+    return;
+  }
+
+  btn.disabled=true; load.style.display='inline-flex';
+  errorBox.style.display='none'; results.style.display='none';
+
+  try{
+    const res=await fetch('/check_job',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job_title:job})
+    });
+    if(!res.ok) throw new Error('Network error');
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+
+    const risk=Math.max(0,Math.min(Number(data.risk_score??data.risk??0),100));
+    let tagText='', color='';
+    if(risk<40){ tagText='LOW'; color='#22c55e'; }
+    else if(risk<70){ tagText='MEDIUM'; color='#f59e0b'; }
+    else { tagText='HIGH'; color='#ef4444'; }
+
+    const tools=Array.isArray(data.tools)?data.tools:[];
+    const linksHTML = tools.map(t => `<li>${t}</li>`).join('') || '<li>—</li>';
+
+    // Updated div.right with color styles
+    results.innerHTML=`<div class="card">
+      <div class="meter-container">
+        <div class="meter">
+          <div class="ring" style="--val:${risk}; --ring-color:${color}"></div>
+          <div class="score">${risk}%</div>
+          <div class="tag">${tagText}</div>
+        </div>
+      </div>
+      <div class="right">
+        <h3 style="color:${color}">${job}</h3>
+        <p style="color:lightblue">${data.summary||'—'}</p>
+        <h4 style="color:#60a5fa">AI Tools to Learn:</h4>
+        <ul>${linksHTML}</ul>
+        <h4 style="color:#f59e0b">Why This Score:</h4>
+        <ul>${Array.isArray(data.factors)?data.factors.map(f=>`<li>${f}</li>`).join(''):'<li>—</li>'}</ul>
+        <h4 style="color:#a78bfa">Roadmap (1–2 months):</h4>
+        <ul>${Array.isArray(data.roadmap)?data.roadmap.map(r=>`<li>${r}</li>`).join(''):'<li>—</li>'}</ul>
+      </div>
+    </div>`;
+    results.style.display='grid';
+    results.scrollIntoView({behavior:'smooth'});
+  }catch(err){
+    errorBox.textContent=`Error: ${err.message}`;
+    errorBox.style.display='block';
+  }finally{
+    btn.disabled=false; load.style.display='none';
+  }
+});
 </script>
 </body>
 </html>
