@@ -94,108 +94,150 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
 .spinner{width:18px; height:18px; border-radius:50%; border:3px solid rgba(148,163,184,.25); border-top-color:#93c5fd; animation:spin .8s linear infinite;}
 @keyframes spin {to{transform:rotate(360deg)}}
 .error{background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); color:#fecaca; margin-top:10px; padding:10px; border-radius:12px;}
+
+/* Link colors */
+#toolsList a { color: #60a5fa; text-decoration: underline; }
+#toolsList a:hover { color: #a78bfa; }
 </style>
 </head>
 <body>
 <div class="shell">
-    <section class="hero">
-        <h1 class="title">Check Your Job’s AI Risk</h1>
-        <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
-    </section>
+  <section class="hero">
+    <h1 class="title">Check Your Job’s AI Risk</h1>
+    <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
 
-    <section class="panel">
-        <form class="query" id="riskForm">
-            <input id="jobInput" class="input" type="text"
-                   placeholder="e.g., Graphic Designer, SQL Developer, HR Manager" autocomplete="on" required/>
-            <button id="checkBtn" class="btn" type="submit">Check</button>
-            <span id="loadState" class="loading" style="display:none"><span class="spinner"></span>Analyzing…</span>
-        </form>
-    </section>
+    <!-- Language Selector -->
+    <div style="margin-top:12px;">
+      <label for="langSelect" style="font-weight:600; margin-right:8px;">🌐 Language:</label>
+      <select id="langSelect" class="input" style="max-width:240px; padding:8px 12px; font-size:14px; color:green">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी (Hindi)</option>
+        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+        <option value="ta">தமிழ் (Tamil)</option>
+        <option value="te">తెలుగు (Telugu)</option>
+      </select>
+    </div>
+  </section>
 
-    <section id="results" class="grid" style="display:none"></section>
-    <section id="errorBox" class="panel card error" style="display:none"></section>
+  <section class="panel">
+    <form class="query" id="riskForm">
+      <input id="jobInput" class="input" type="text" placeholder="e.g., Graphic Designer, SQL Developer, HR Manager" autocomplete="on" required/>
+      <button id="checkBtn" class="btn" type="submit">Check</button>
+      <span id="loadState" class="loading" style="display:none"><span class="spinner"></span>Analyzing…</span>
+    </form>
+  </section>
+
+  <section id="results" class="grid" style="display:none"></section>
+  <section id="errorBox" class="panel card error" style="display:none"></section>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
+// ---------------- DOM refs ----------------
 const form = document.getElementById('riskForm');
 const input = document.getElementById('jobInput');
 const btn = document.getElementById('checkBtn');
 const load = document.getElementById('loadState');
 const results = document.getElementById('results');
 const errorBox = document.getElementById('errorBox');
+const langSelect = document.getElementById('langSelect');
 
-const learningLinks = {
-  "Python":"https://www.learnpython.org/",
-  "SQL":"https://www.w3schools.com/sql/",
-  "TensorFlow":"https://www.tensorflow.org/",
-  "PowerBI":"https://learn.microsoft.com/en-us/power-bi/",
-  "Tableau":"https://www.tableau.com/learn/training",
-  "ChatGPT":"https://chat.openai.com",
-  "MidJourney":"https://www.midjourney.com/"
+let currentLang = 'en';
+let lastRenderData = null; // cache last response for re-render on language switch
+
+// ---------------- UI translations (static strings) ----------------
+const tDict = {
+  en:{title:"Check Your Job’s AI Risk",subtitle:"Instant, personalized analysis with score, explanation, tools, and roadmap",inputPlaceholder:"e.g., Graphic Designer, SQL Developer, HR Manager",checkBtn:"Check",analyzing:"Analyzing…",tools:"AI Tools to Learn:",factors:"Why This Score:",roadmap:"Roadmap (1–2 months):",shareTwitter:"🐦 Twitter",shareWhatsApp:"💬 WhatsApp",shareLinkedIn:"💼 LinkedIn",pdfBtn:"📄 Generate PDF",riskLabel:(job,tf,tag)=>`${tag} automation risk for ${job} over the next ${tf}`},
+  hi:{title:"अपनी नौकरी का AI जोखिम जाँचें",subtitle:"स्कोर, व्याख्या, उपकरण और रोडमैप के साथ त्वरित, व्यक्तिगत विश्लेषण",inputPlaceholder:"जैसे: ग्राफिक डिज़ाइनर, SQL डेवलपर, HR मैनेजर",checkBtn:"जाँचें",analyzing:"विश्लेषण हो रहा है…",tools:"सीखने के लिए AI टूल्स:",factors:"यह स्कोर क्यों:",roadmap:"रोडमैप (1–2 महीने):",shareTwitter:"🐦 ट्विटर",shareWhatsApp:"💬 व्हाट्सऐप",shareLinkedIn:"💼 लिंक्डइन",pdfBtn:"📄 PDF बनाएँ",riskLabel:(job,tf,tag)=>`${job} के लिए ${tf} में ${tag} स्वचालन जोखिम`},
+  kn:{title:"ನಿಮ್ಮ ಉದ್ಯೋಗದ AI ಅಪಾಯ ಪರಿಶೀಲಿಸಿ",subtitle:"ಸ್ಕೋರ್, ವಿವರಣೆ, ಸಾಧನಗಳು ಮತ್ತು ರಸ್ತೆನಕ್ಷೆಯೊಂದಿಗೆ ತ್ವರಿತ, ವೈಯಕ್ತಿಕ ವಿಶ್ಲೇಷಣೆ",inputPlaceholder:"ಉದಾ: ಗ್ರಾಫಿಕ್ ಡಿಸೈನರ್, SQL ಡೆವಲಪರ್, HR ಮ್ಯಾನೇಜರ್",checkBtn:"ಪರಿಶೀಲಿಸಿ",analyzing:"ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ…",tools:"ಕಲಿಯಲು AI ಸಾಧನಗಳು:",factors:"ಈ ಅಂಕೆ ಯಾಕೆ:",roadmap:"ರೋಡ್‌ಮ್ಯಾಪ್ (1–2 ತಿಂಗಳು):",shareTwitter:"🐦 ಟ್ವಿಟ್ಟರ್",shareWhatsApp:"💬 ವಾಟ್ಸಾಪ್",shareLinkedIn:"💼 ಲಿಂಕ್‌ಡಿನ್",pdfBtn:"📄 PDF ರಚಿಸಿ",riskLabel:(job,tf,tag)=>`${job}ಗೆ ಮುಂದಿನ ${tf} ನಲ್ಲಿ ${tag} ಸ್ವಯಂಕ್ರಿಯ ಅಪಾಯ`},
+  ta:{title:"உங்கள் வேலையின் AI அபாயத்தை சரிபார்க்கவும்",subtitle:"மதிப்பெண், விளக்கம், கருவிகள் மற்றும் சாலைவரைபடத்துடன் உடனடி, தனிப்பயன் பகுப்பாய்வு",inputPlaceholder:"எ.கா., கிராஃபிக் டிசைனர், SQL டெவலப்பர், HR மேலாளர்",checkBtn:"சரிபார்க்கவும்",analyzing:"பகுப்பாய்வு நடைபெறுகிறது…",tools:"கற்றுக்கொள்ள AI கருவிகள்:",factors:"இந்த மதிப்பெண் ஏன்:",roadmap:"சாலை வரைபடம் (1–2 மாதங்கள்):",shareTwitter:"🐦 ட்விட்டர்",shareWhatsApp:"💬 வாட்ஸ்அப்",shareLinkedIn:"💼 லிங்க்ட்இன்",pdfBtn:"📄 PDF உருவாக்கவும்",riskLabel:(job,tf,tag)=>`${job}க்கான அடுத்த ${tf} இல் ${tag} தானியக்க அபாயம்`},
+  te:{title:"మీ ఉద్యోగం యొక్క AI ప్రమాదాన్ని తనిఖీ చేయండి",subtitle:"స్కోర్, వివరణ, సాధనాలు మరియు రోడ్‌మ్యాప్‌తో తక్షణ, వ్యక్తిగత విశ్లేషణ",inputPlaceholder:"ఉదా: గ్రాఫిక్ డిజైనర్, SQL డెవలపర్, HR మేనేజర్",checkBtn:"తనిఖీ చేయండి",analyzing:"విశ్లేషణ జరుగుతోంది…",tools:"నేర్చుకోవలసిన AI టూల్స్:",factors:"ఈ స్కోరు ఎందుకు:",roadmap:"రోడ్‌మ్యాప్ (1–2 నెలలు):",shareTwitter:"🐦 ట్విట్టర్",shareWhatsApp:"💬 వాట్సాప్",shareLinkedIn:"💼 లింక్డ్‌ఇన్",pdfBtn:"📄 PDF సృష్టించండి",riskLabel:(job,tf,tag)=>`${job} కోసం వచ్చే ${tf} లో ${tag} ఆటోమేషన్ ప్రమాదం`}
 };
 
-function getSkillLink(skill) {
-  return learningLinks[skill]
-    ? `<a href="${learningLinks[skill]}" target="_blank">${skill}</a>`
-    : skill;
+function applyUI(lang){
+  currentLang = lang;
+  const t = tDict[lang] || tDict.en;
+  document.querySelector('.title').textContent = t.title;
+  document.querySelector('.subtitle').textContent = t.subtitle;
+  input.placeholder = t.inputPlaceholder;
+  btn.textContent = t.checkBtn;
+  load.innerHTML = `<span class="spinner"></span>${t.analyzing}`;
 }
 
-function isValidJobInput(text) {
-  return /^[a-zA-Z\s\-&,]+$/.test(text);
-}
-
-input.addEventListener('input', () => {
-  const valid = isValidJobInput(input.value.trim()) || input.value.trim() === '';
-  input.style.borderColor = valid ? 'rgba(255,255,255,.12)' : '#ef4444';
-
-  if (input.value.trim() === '') {
-    results.style.display = 'none';
-    results.innerHTML = '';
-    errorBox.style.display = 'none';
+langSelect.addEventListener('change', async () => {
+  applyUI(langSelect.value);
+  if(lastRenderData){
+    // Re-render in new language
+    await renderResults(lastRenderData);
   }
 });
 
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const job = input.value.trim();
-  if (!job) {
-    errorBox.textContent = 'Error: Please enter a job title.';
-    errorBox.style.display = 'block';
-    return;
-  }
-  if (!isValidJobInput(job)) {
-    errorBox.textContent = 'Error: Please enter a valid job title (letters, spaces, -, &, , allowed).';
-    errorBox.style.display = 'block';
-    return;
-  }
+applyUI('en');
 
-  btn.disabled = true; load.style.display = 'inline-flex';
-  errorBox.style.display = 'none'; results.style.display = 'none';
+// ---------------- Translation API (with cache + graceful fallback) ----------------
+const translateCache = new Map(); // key: `${lang}::${text}` -> translation
 
-  try {
-    const res = await fetch('/check_job', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_title: job })
-    });
-    if (!res.ok) throw new Error('Network error');
+async function translateText(text, targetLang){
+  if(!text) return '';
+  if(targetLang === 'en') return text;
+  const key = `${targetLang}::${text}`;
+  if(translateCache.has(key)) return translateCache.get(key);
+  try{
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('translate api error');
     const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    const translated = (data && Array.isArray(data[0])) ? data[0].map(part=>part[0]).join('') : text;
+    translateCache.set(key, translated);
+    return translated;
+  }catch(err){
+    console.warn('Translation failed, falling back to original text:', err);
+    return text; // fallback – show original
+  }
+}
 
-    const risk = Math.max(0, Math.min(Number(data.risk_score ?? data.risk ?? 0), 100));
-    let tagText = '', color = '', timeframe = '';
+async function translateArray(arr, lang){
+  if(!Array.isArray(arr) || arr.length===0) return [];
+  if(lang==='en') return arr;
+  const out = [];
+  for(const item of arr){ out.push(await translateText(item, lang)); }
+  return out;
+}
 
-    if (risk < 40) { tagText = 'LOW'; color = '#22c55e'; timeframe = '3–5 years'; }
-    else if (risk < 70) { tagText = 'MEDIUM'; color = '#f59e0b'; timeframe = '2–4 years'; }
-    else { tagText = 'HIGH'; color = '#ef4444'; timeframe = '1–2 years'; }
+// ---------------- Helpers ----------------
+function isValidJobInput(text){
+  // allow letters, numbers, spaces, common punctuation for roles (C++, ML/AI, Sr., &)
+  return /^[a-zA-Z0-9\s\-&,./+]+$/.test(text);
+}
 
-    const dynamicSummary = `${tagText} automation risk for ${job} over the next ${timeframe}`;
-    const tools = Array.isArray(data.tools) ? data.tools : [];
+function parseTool(item){
+  // Accept formats like "Name (https://...)" or just plain name
+  const m = typeof item === 'string' && item.match(/^(.*?)\s*\((https?:\/\/[^\s)]+)\)\s*$/);
+  return m ? { name:m[1], url:m[2] } : { name:String(item||''), url:null };
+}
 
-    const previewUrl = `${window.location.origin}/preview/${encodeURIComponent(job)}`;
+function clearResults(){
+  results.style.display = 'none';
+  results.innerHTML = '';
+}
 
-    results.innerHTML = `<div class="card">
+// ---------------- Render ----------------
+async function renderResults(payload){
+  lastRenderData = payload; // save for language re-render
+  const t = tDict[currentLang] || tDict.en;
+
+  const { job, risk, tagText, timeframe, tools, factors, roadmap, color } = payload;
+
+  // Translations for dynamic content
+  const summary = await translateText(t.riskLabel(job, timeframe, tagText), currentLang);
+  const factorsT = await translateArray(factors, currentLang);
+  const roadmapT = await translateArray(roadmap, currentLang);
+
+  const previewUrl = `${window.location.origin}/preview/${encodeURIComponent(job)}`;
+
+  // Build card
+  results.innerHTML = `
+    <div class="card">
       <div class="meter-container">
         <div class="meter">
           <div class="ring" style="--val:${risk}; --ring-color:${color}"></div>
@@ -205,69 +247,150 @@ form.addEventListener('submit', async (e) => {
       </div>
       <div class="right">
         <h3 style="color:${color}">${job}</h3>
-        <p style="color:lightblue">${dynamicSummary}</p>
-        <h4 style="color:#60a5fa">AI Tools to Learn:</h4>
+        <p id="summaryLine" style="color:lightblue"></p>
+        <h4 style="color:#60a5fa">${t.tools}</h4>
         <ul id="toolsList"></ul>
-        <h4 style="color:#f59e0b">Why This Score:</h4>
-        <ul>${Array.isArray(data.factors) ? data.factors.map(f => `<li>${f}</li>`).join('') : '<li>—</li>'}</ul>
-        <h4 style="color:#a78bfa">Roadmap (1–2 months):</h4>
-        <ul>${Array.isArray(data.roadmap) ? data.roadmap.map(r => `<li>${r}</li>`).join('') : '<li>—</li>'}</ul>
+        <h4 style="color:#f59e0b">${t.factors}</h4>
+        <ul id="factorsList"></ul>
+        <h4 style="color:#a78bfa">${t.roadmap}</h4>
+        <ul id="roadmapList"></ul>
       </div>
       <div class="actions">
-        <a href="https://twitter.com/intent/tweet?text=Check+${encodeURIComponent(job)}+AI+Risk&url=${encodeURIComponent(previewUrl)}" target="_blank" class="btn">🐦 Twitter</a>
-        <a href="https://api.whatsapp.com/send?text=Check+${encodeURIComponent(job)}+AI+Risk+${encodeURIComponent(previewUrl)}" target="_blank" class="btn">💬 WhatsApp</a>
-        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(previewUrl)}" target="_blank" class="btn" style="background: linear-gradient(90deg, #0A66C2, #004182); color:white">💼 LinkedIn</a>
-        <button onclick="generatePDF()" class="btn" style="background: linear-gradient(90deg, #f59e0b, #d97706); color:white">📄 Generate PDF</button>
+        <a href="https://twitter.com/intent/tweet?text=Check+${encodeURIComponent(job)}+AI+Risk&url=${encodeURIComponent(previewUrl)}" class="btn share">${t.shareTwitter}</a>
+        <a href="https://api.whatsapp.com/send?text=Check+${encodeURIComponent(job)}+AI+Risk+${encodeURIComponent(previewUrl)}" class="btn share">${t.shareWhatsApp}</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(previewUrl)}" class="btn share" style="background: linear-gradient(90deg, #0A66C2, #004182); color:white">${t.shareLinkedIn}</a>
+        <button class="btn generate-pdf" style="background: linear-gradient(90deg, #f59e0b, #d97706); color:white">${t.pdfBtn}</button>
       </div>
     </div>`;
 
-    // Render AI Tools clickable links
-    const toolsListEl = document.getElementById('toolsList');
-    toolsListEl.innerHTML = '';
-    tools.forEach(tool => {
-      const match = tool.match(/^(.*?)\s*\((https?:\/\/.*?)\)$/);
-      if (match) {
-        const li = document.createElement('li');
-        li.innerHTML = `<a href="${match[2]}" target="_blank">${match[1]}</a>`;
-        toolsListEl.appendChild(li);
-      } else {
-        const li = document.createElement('li');
-        li.textContent = tool;
-        toolsListEl.appendChild(li);
-      }
-    });
+  // Fill summary
+  const summaryEl = document.getElementById('summaryLine');
+  summaryEl.textContent = summary;
 
-    results.style.display = 'grid';
-    results.scrollIntoView({ behavior: 'smooth' });
-  } catch (err) {
+  // Fill tools
+  const toolsListEl = document.getElementById('toolsList');
+  toolsListEl.innerHTML='';
+  for(const item of tools){
+    const { name, url } = parseTool(item);
+    const li = document.createElement('li');
+    if(url){
+      const a = document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=name; li.appendChild(a);
+    }else{
+      li.textContent = name;
+    }
+    toolsListEl.appendChild(li);
+  }
+
+  // Fill factors and roadmap (already translated)
+  const factorsListEl = document.getElementById('factorsList');
+  const roadmapListEl = document.getElementById('roadmapList');
+  for(const f of factorsT){ const li=document.createElement('li'); li.textContent=f; factorsListEl.appendChild(li); }
+  for(const r of roadmapT){ const li=document.createElement('li'); li.textContent=r; roadmapListEl.appendChild(li); }
+
+  results.style.display='grid';
+  results.scrollIntoView({behavior:'smooth'});
+}
+
+// ---------------- Form handlers ----------------
+input.addEventListener('input', () => {
+  const txt = input.value.trim();
+  const valid = isValidJobInput(txt) || txt === '';
+  input.style.borderColor = valid ? 'rgba(255,255,255,.12)' : '#ef4444';
+  if(txt===''){ clearResults(); errorBox.style.display='none'; }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const job = input.value.trim();
+  if(!job){ errorBox.textContent='Error: Please enter a job title.'; errorBox.style.display='block'; return; }
+  if(!isValidJobInput(job)){ errorBox.textContent='Error: Please enter a valid job title (letters, numbers, spaces, -, &, ., /, + allowed).'; errorBox.style.display='block'; return; }
+
+  btn.disabled = true; load.style.display = 'inline-flex'; errorBox.style.display='none'; clearResults();
+
+  try{
+    const res = await fetch('/check_job', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ job_title: job }) });
+    if(!res.ok) throw new Error('Network error');
+    const data = await res.json();
+    if(data.error) throw new Error(data.error);
+
+    const risk = Math.max(0, Math.min(Number(data.risk_score ?? data.risk ?? 0), 100));
+    let tagText = '', color = '', timeframe = '';
+    if(risk < 40){ tagText='LOW'; color='#22c55e'; timeframe='3–5 years'; }
+    else if(risk < 70){ tagText='MEDIUM'; color='#f59e0b'; timeframe='2–4 years'; }
+    else { tagText='HIGH'; color='#ef4444'; timeframe='1–2 years'; }
+
+    const tools = Array.isArray(data.tools) ? data.tools : [];
+    const factors = Array.isArray(data.factors) ? data.factors : [];
+    const roadmap = Array.isArray(data.roadmap) ? data.roadmap : [];
+
+    await renderResults({ job, risk, tagText, timeframe, tools, factors, roadmap, color });
+  }catch(err){
+    console.error(err);
     errorBox.textContent = `Error: ${err.message}`;
     errorBox.style.display = 'block';
-  } finally {
+  }finally{
     btn.disabled = false; load.style.display = 'none';
   }
 });
 
-// PDF generation
-function generatePDF() {
+// ---------------- PDF generation ----------------
+function generatePDF(){
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF();
-  let y = 10;
-  pdf.setFontSize(18);
-  pdf.text("AI Risk Report", 10, y);
-  y += 10;
+  const t = tDict[currentLang] || tDict.en;
+  let y = 12;
 
-  pdf.setFontSize(14);
-  pdf.text("AI Tools to Learn:", 10, y);
-  y += 10;
+  function line(txt, inc=8){ pdf.text(String(txt), 10, y); y += inc; if(y > 280){ pdf.addPage(); y = 12; } }
+  function bullet(txt){ line(`• ${txt}`); }
 
+  const card = results.querySelector('.card');
+  if(!card){ return; }
+
+  const job = lastRenderData?.job || '';
+  const risk = lastRenderData?.risk || 0;
+  const tagText = lastRenderData?.tagText || '';
+  const timeframe = lastRenderData?.timeframe || '';
+
+  pdf.setFontSize(18); line('AI Risk Report', 10);
+  pdf.setFontSize(12);
+  line(`${job}`);
+  line(`${risk}% (${tagText})`);
+  line(t.riskLabel(job, timeframe, tagText));
+  line('');
+
+  pdf.setFontSize(14); line(t.tools, 10);
+  pdf.setFontSize(12);
   const toolsList = document.getElementById('toolsList');
-  toolsList.querySelectorAll('a').forEach(a => {
-    pdf.textWithLink(a.textContent, 10, y, { url: a.href });
-    y += 10;
+  toolsList?.querySelectorAll('li').forEach(li => {
+    const a = li.querySelector('a');
+    if(a){ pdf.textWithLink(a.textContent || '', 10, y, { url: a.href }); y += 8; if(y>280){ pdf.addPage(); y=12; } }
+    else { bullet(li.textContent || ''); }
   });
+  line('');
 
-  pdf.save("AI_Risk_Report.pdf");
+  pdf.setFontSize(14); line(t.factors, 10);
+  pdf.setFontSize(12);
+  document.querySelectorAll('#factorsList li').forEach(li => bullet(li.textContent||''));
+  line('');
+
+  pdf.setFontSize(14); line(t.roadmap, 10);
+  pdf.setFontSize(12);
+  document.querySelectorAll('#roadmapList li').forEach(li => bullet(li.textContent||''));
+
+  pdf.save('AI_Risk_Report.pdf');
 }
+
+results.addEventListener('click', (e) => {
+  const target = e.target;
+  if(!(target instanceof Element)) return;
+  if(target.matches('.btn.share')){
+    e.preventDefault();
+    window.open(target.getAttribute('href'), 'shareWindow', 'width=600,height=500,scrollbars=yes,resizable=yes');
+  }
+  if(target.matches('.btn.generate-pdf')){
+    generatePDF();
+  }
+});
 </script>
 </body>
 </html>
