@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Check Your Job's AI Risk</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
@@ -25,7 +25,6 @@ body{
   -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
 .subtitle{opacity:.85; margin-top:8px; font-size:clamp(14px,1.4vw,16px)}
-
 .panel{
   margin-top:18px; background:var(--glass); border:1px solid rgba(255,255,255,.08);
   border-radius:20px; padding:20px; backdrop-filter: blur(14px);
@@ -43,13 +42,13 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   appearance:none; border:0; border-radius:14px; padding:14px 20px; font-weight:700; font-size:16px;
   background: linear-gradient(90deg, var(--accent1), var(--accent2));
   color:#0b1220; cursor:pointer; transition:transform .15s ease, filter .15s ease;
+  text-decoration:none; text-align:center; display:inline-block;
 }
 .btn:hover{transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
 .btn[disabled]{opacity:.6; cursor:not-allowed; filter:grayscale(20%)}
 
 .grid{display:grid; gap:24px; grid-template-columns:1fr; margin-top:20px;}
-
 .card{
   background:rgba(255,255,255,.07);
   border:1px solid rgba(255,255,255,.08);
@@ -61,38 +60,16 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   position: relative;
 }
-/* Updated hover: removed blue glow */
 .card:hover{
   transform: translateY(-5px);
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
   border-color: rgba(255,255,255,.08);
 }
-
-.card-badge {
-  position: absolute;
-  top: -12px;
-  right: -12px;
-  background: linear-gradient(90deg, #facc15, #f87171);
-  color: #0b1220;
-  font-weight: 800;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-  z-index: 10;
-  transform: rotate(-10deg);
-  transition: box-shadow 0.3s ease;
-}
-
-.meter-container{
-  display:flex; justify-content:center; align-items:center;
-}
+.meter-container{ display:flex; justify-content:center; align-items:center; }
 .meter{
   position:relative;
-  width:120px;
-  height:120px;
+  width:120px; height:120px;
   border-radius:50%;
-  background: conic-gradient(#60a5fa 0%, rgba(255,255,255,.12) 0);
   display:grid; place-items:center;
 }
 .ring{
@@ -112,7 +89,7 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
 .right p, .right ul{opacity:.85; margin-top:6px; font-size:14px; line-height:1.6;}
 .right ul{padding-left:24px; margin-top:12px;}
 .right ul li{margin-bottom:12px;}
-
+.actions{margin-top:10px; display:flex; gap:12px; flex-wrap:wrap}
 .loading{display:inline-flex; align-items:center; gap:10px; color:#bfdbfe; font-weight:600;}
 .spinner{width:18px; height:18px; border-radius:50%; border:3px solid rgba(148,163,184,.25); border-top-color:#93c5fd; animation:spin .8s linear infinite;}
 @keyframes spin {to{transform:rotate(360deg)}}
@@ -121,22 +98,25 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
 </head>
 <body>
 <div class="shell">
-  <section class="hero">
-    <h1 class="title">Check Your Job’s AI Risk</h1>
-    <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
-  </section>
+    <section class="hero">
+        <h1 class="title">Check Your Job’s AI Risk</h1>
+        <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
+    </section>
 
-  <section class="panel">
-    <form class="query" id="riskForm">
-      <input id="jobInput" class="input" type="text" placeholder="e.g., Graphic Designer, SQL Developer, HR Manager" autocomplete="on" required />
-      <button id="checkBtn" class="btn" type="submit">Check</button>
-      <span id="loadState" class="loading" style="display:none"><span class="spinner"></span>Analyzing…</span>
-    </form>
-  </section>
+    <section class="panel">
+        <form class="query" id="riskForm">
+            <input id="jobInput" class="input" type="text"
+                   placeholder="e.g., Graphic Designer, SQL Developer, HR Manager" autocomplete="on" required/>
+            <button id="checkBtn" class="btn" type="submit">Check</button>
+            <span id="loadState" class="loading" style="display:none"><span class="spinner"></span>Analyzing…</span>
+        </form>
+    </section>
 
-  <section id="results" class="grid" style="display:none"></section>
-  <section id="errorBox" class="panel card error" style="display:none"></section>
+    <section id="results" class="grid" style="display:none"></section>
+    <section id="errorBox" class="panel card error" style="display:none"></section>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const form = document.getElementById('riskForm');
 const input = document.getElementById('jobInput');
@@ -145,7 +125,15 @@ const load = document.getElementById('loadState');
 const results = document.getElementById('results');
 const errorBox = document.getElementById('errorBox');
 
-const learningLinks = { /* same as before */ };
+const learningLinks = {
+  "Python":"https://www.learnpython.org/",
+  "SQL":"https://www.w3schools.com/sql/",
+  "TensorFlow":"https://www.tensorflow.org/",
+  "PowerBI":"https://learn.microsoft.com/en-us/power-bi/",
+  "Tableau":"https://www.tableau.com/learn/training",
+  "ChatGPT":"https://chat.openai.com",
+  "MidJourney":"https://www.midjourney.com/"
+};
 
 function getSkillLink(skill) {
   return learningLinks[skill]
@@ -159,8 +147,7 @@ function isValidJobInput(text) {
 
 input.addEventListener('input', () => {
   const valid = isValidJobInput(input.value.trim()) || input.value.trim() === '';
-  if (!valid) input.style.borderColor = '#ef4444';
-  else input.style.borderColor = 'rgba(255,255,255,.12)';
+  input.style.borderColor = valid ? 'rgba(255,255,255,.12)' : '#ef4444';
 
   if (input.value.trim() === '') {
     results.style.display = 'none';
@@ -204,9 +191,9 @@ form.addEventListener('submit', async (e) => {
     else { tagText = 'HIGH'; color = '#ef4444'; timeframe = '1–2 years'; }
 
     const dynamicSummary = `${tagText} automation risk for ${job} over the next ${timeframe}`;
-
     const tools = Array.isArray(data.tools) ? data.tools : [];
-    const linksHTML = tools.map(t => `<li>${getSkillLink(t)}</li>`).join('') || '<li>—</li>';
+
+    const previewUrl = `${window.location.origin}/preview/${encodeURIComponent(job)}`;
 
     results.innerHTML = `<div class="card">
       <div class="meter-container">
@@ -220,13 +207,35 @@ form.addEventListener('submit', async (e) => {
         <h3 style="color:${color}">${job}</h3>
         <p style="color:lightblue">${dynamicSummary}</p>
         <h4 style="color:#60a5fa">AI Tools to Learn:</h4>
-        <ul>${linksHTML}</ul>
+        <ul id="toolsList"></ul>
         <h4 style="color:#f59e0b">Why This Score:</h4>
         <ul>${Array.isArray(data.factors) ? data.factors.map(f => `<li>${f}</li>`).join('') : '<li>—</li>'}</ul>
         <h4 style="color:#a78bfa">Roadmap (1–2 months):</h4>
         <ul>${Array.isArray(data.roadmap) ? data.roadmap.map(r => `<li>${r}</li>`).join('') : '<li>—</li>'}</ul>
       </div>
+      <div class="actions">
+        <a href="https://twitter.com/intent/tweet?text=Check+${encodeURIComponent(job)}+AI+Risk&url=${encodeURIComponent(previewUrl)}" target="_blank" class="btn">🐦 Twitter</a>
+        <a href="https://api.whatsapp.com/send?text=Check+${encodeURIComponent(job)}+AI+Risk+${encodeURIComponent(previewUrl)}" target="_blank" class="btn">💬 WhatsApp</a>
+        <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(previewUrl)}" target="_blank" class="btn" style="background: linear-gradient(90deg, #0A66C2, #004182); color:white">💼 LinkedIn</a>
+        <button onclick="generatePDF()" class="btn" style="background: linear-gradient(90deg, #f59e0b, #d97706); color:white">📄 Generate PDF</button>
+      </div>
     </div>`;
+
+    // Render AI Tools clickable links
+    const toolsListEl = document.getElementById('toolsList');
+    toolsListEl.innerHTML = '';
+    tools.forEach(tool => {
+      const match = tool.match(/^(.*?)\s*\((https?:\/\/.*?)\)$/);
+      if (match) {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${match[2]}" target="_blank">${match[1]}</a>`;
+        toolsListEl.appendChild(li);
+      } else {
+        const li = document.createElement('li');
+        li.textContent = tool;
+        toolsListEl.appendChild(li);
+      }
+    });
 
     results.style.display = 'grid';
     results.scrollIntoView({ behavior: 'smooth' });
@@ -237,7 +246,28 @@ form.addEventListener('submit', async (e) => {
     btn.disabled = false; load.style.display = 'none';
   }
 });
-</script>
 
+// PDF generation
+function generatePDF() {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF();
+  let y = 10;
+  pdf.setFontSize(18);
+  pdf.text("AI Risk Report", 10, y);
+  y += 10;
+
+  pdf.setFontSize(14);
+  pdf.text("AI Tools to Learn:", 10, y);
+  y += 10;
+
+  const toolsList = document.getElementById('toolsList');
+  toolsList.querySelectorAll('a').forEach(a => {
+    pdf.textWithLink(a.textContent, 10, y, { url: a.href });
+    y += 10;
+  });
+
+  pdf.save("AI_Risk_Report.pdf");
+}
+</script>
 </body>
 </html>

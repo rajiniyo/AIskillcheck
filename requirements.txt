@@ -6,3 +6,5 @@ cohere==5.17.0
 requests>=2.31
 Flask
 python-dotenv
+Pillow
+reportlab
