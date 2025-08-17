@@ -17,6 +17,24 @@ body{
   min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:32px;
   background: linear-gradient(135deg, var(--bg1), var(--bg2));
 }
+
+.logo {
+    position: fixed;   /* stays in place while scrolling */
+    top: 20px;
+    left: 20px;
+    height: 80px;      /* default size */
+    z-index: 1000;     /* always on top */
+    cursor: pointer;   /* pointer cursor on hover */
+  }
+
+  /* Make logo smaller on mobile screens */
+  @media (max-width: 600px) {
+    .logo {
+      height: 50px;   /* smaller on mobile */
+      top: 10px;
+      right: 10px;
+    }
+  }
 .shell{ width:min(1200px,100%); margin:12px auto; position:relative; }
 .hero{ padding:28px 24px 4px; text-align:center; }
 .title{
@@ -102,14 +120,25 @@ form.query{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
 </head>
 <body>
 <div class="shell">
-  <section class="hero">
-    <h1 class="title">Check Your Job’s AI Risk</h1>
-    <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
+  <div class="shell">
+    <!-- Clickable Logo in top-right -->
+    <a href="{{ url_for('home') }}">
+      <img src="{{ url_for('static', filename='logo.png') }}"
+           alt="Logo"
+           class="logo" style="height:105px; margin-bottom:18px; display:block; margin-left:auto; margin-right:auto;" />
+    </a>
 
+    <section class="hero">
+      <h1 class="title">Check Your Job’s AI Risk</h1>
+      <p class="subtitle">Instant, personalized analysis with score, explanation, tools, and roadmap</p>
+    </section>
+   </div>
     <!-- Language Selector -->
     <div style="margin-top:12px;">
+      <div style="display:flex; justify-content:center; align-items:center; margin-top:20px;">
       <label for="langSelect" style="font-weight:600; margin-right:8px;">🌐 Language:</label>
-      <select id="langSelect" class="input" style="max-width:240px; padding:8px 12px; font-size:14px; color:green">
+      <select id="langSelect" class="input"
+          style="max-width:240px; padding:8px 12px; font-size:14px; color:green;">
         <option value="en">English</option>
         <option value="hi">हिन्दी (Hindi)</option>
         <option value="kn">ಕನ್ನಡ (Kannada)</option>
